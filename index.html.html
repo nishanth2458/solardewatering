@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Mine Dewatering Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: radial-gradient(1200px 600px at 20% -10%, rgba(34,197,94,0.08), transparent 60%),
+                              radial-gradient(1000px 500px at 120% 0%, rgba(14,165,233,0.08), transparent 60%);
+            background-attachment: fixed;
+        }
+        /* Custom scrollbar for a better dark-theme look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937; /* bg-gray-800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563; /* bg-gray-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* bg-gray-500 */
+        }
+        .card {
+            background: linear-gradient(180deg, rgba(31,41,55,1) 0%, rgba(17,24,39,1) 100%);
+            border: 1px solid #374151; /* border-gray-700 */
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out, background 0.2s ease-in-out;
+            border-radius: 1rem; /* rounded-2xl */
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.35), 0 10px 10px -2px rgba(0, 0, 0, 0.25);
+            border-color: #4b5563;
+        }
+        .control-btn {
+            transition: all 0.2s ease-in-out;
+            outline: none;
+        }
+        .control-btn:hover {
+            filter: brightness(1.05);
+            box-shadow: 0 8px 14px -6px rgba(0,0,0,0.45);
+        }
+        .control-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(148,163,184,0.35);
+        }
+        input[type="number"] {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            border-radius: 0.5rem;
+            outline: none;
+        }
+        input[type="number"]:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6,182,212,0.25);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            border: 1px solid rgba(255,255,255,0.06);
+            background-color: rgba(17,24,39,0.6);
+        }
+        .section-title {
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 font-sans">
+
+    <!-- Main container -->
+    <div class="max-w-7xl mx-auto p-4 sm:p-6">
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-extrabold tracking-tight text-cyan-400">⛏️ Mine Dewatering Dashboard</h1>
+                <p class="text-gray-400 mt-1">Analysis & Continuous Simulation Model (Offline Enabled)</p>
+            </div>
+            <div id="time-container" class="text-right bg-gray-800/70 backdrop-blur px-4 py-2 rounded-lg border border-gray-700 mt-4 sm:mt-0">
+                 <p class="text-lg font-semibold" id="time"></p>
+                 <p class="text-xs text-gray-400" id="date"></p>
+            </div>
+        </header>
+
+        <!-- Static Analysis Section -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-300 mb-4 section-title">Khetri Area: Baseline Power Analysis</h2>
+            
+            <!-- Pump Inventory -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-xl font-semibold mb-4 text-cyan-400">Pump Inventory Summary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold mb-1">Small Submersible</h4>
+                        <p class="text-gray-300"><span id="inventorySmallPumps" class="font-bold text-2xl text-blue-400">20</span> units</p>
+                        <p class="text-gray-500 text-sm">~10 HP each</p>
+                    </div>
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold mb-1">Medium Booster Sets</h4>
+                        <p class="text-gray-300"><span id="inventoryMediumPumps" class="font-bold text-2xl text-green-400">12</span> units</p>
+                        <p class="text-gray-500 text-sm">~60 HP each</p>
+                    </div>
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold mb-1">Large Permanent Sets</h4>
+                        <p class="text-gray-300"><span id="inventoryLargePumps" class="font-bold text-2xl text-red-400">6</span> units</p>
+                        <p class="text-gray-500 text-sm">~150 HP each</p>
+                    </div>
+                    <div class="bg-gray-900 p-4 rounded-lg">
+                        <h4 class="text-lg font-semibold mb-1">Diesel/Mobile Pumps</h4>
+                        <p class="text-gray-300"><span class="font-bold text-2xl text-yellow-400">2</span> units</p>
+                        <p class="text-gray-500 text-sm">(Standby) ~50 HP each</p>
+                    </div>
+                </div>
+                <p class="text-center mt-4 text-lg text-gray-300 font-medium">Total Estimated Pumps: <span id="inventoryTotalPumps" class="font-bold text-2xl text-white">40</span></p>
+            </div>
+
+            <!-- Operating Scenarios -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold text-center mb-4">Normal / Lower Inflow</h3>
+                    <div class="space-y-3 mb-4">
+                        <p><span class="badge bg-blue-900 text-blue-300">50% ON</span> - Small Pumps (10 of 20)</p>
+                        <p><span class="badge bg-green-900 text-green-300">75% ON</span> - Medium Pumps (9 of 12)</p>
+                        <p><span class="badge bg-red-900 text-red-300">100% ON</span> - Large Pumps (6 of 6)</p>
+                    </div>
+                    <div class="bg-gray-900 rounded-lg p-4 text-center mt-auto">
+                        <p class="text-sm font-medium text-gray-400 uppercase">Estimated Electrical Input</p>
+                        <p class="text-3xl font-bold text-blue-400">~1.35 MW</p>
+                    </div>
+                </div>
+                <div class="card p-6 border-2 border-red-500">
+                    <h3 class="text-xl font-bold text-center mb-4 text-red-400">High Inflow / Monsoon</h3>
+                    <div class="space-y-3 mb-4">
+                        <p><span class="badge bg-blue-900 text-blue-300">80% ON</span> - Small Pumps (16 of 20)</p>
+                        <p><span class="badge bg-green-900 text-green-300">100% ON</span> - Medium Pumps (12 of 12)</p>
+                        <p><span class="badge bg-red-900 text-red-300">100% ON</span> - Large Pumps (6 of 6)</p>
+                    </div>
+                    <div class="bg-red-900/20 rounded-lg p-4 text-center mt-auto">
+                        <p class="text-sm font-medium text-red-300 uppercase">Estimated Electrical Input</p>
+                        <p class="text-3xl font-bold text-red-400">~1.56 MW</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <hr class="border-gray-700 my-8">
+
+        <!-- Main content grid for SIMULATOR -->
+        <h2 class="text-2xl font-bold text-gray-300 mb-4 section-title">Live Simulation Model</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left column for KPIs -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Simulation Controls Card -->
+                <div class="card p-6 shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-300">Simulation Controls</h2>
+                    <div class="space-y-4">
+                        <!-- Pump Configuration -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Pump Configuration</label>
+                            <div class="space-y-3">
+                                <!-- Pump Type Large -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="numPumpsA" class="text-xs text-gray-500">No. of Pumps (Large)</label>
+                                        <input type="number" id="numPumpsA" value="6" class="w-full p-2 text-white mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="powerRatingA" class="text-xs text-gray-500">Power (HP)/Pump Large</label>
+                                        <input type="number" id="powerRatingA" value="150" class="w-full p-2 text-white mt-1 pump-power-input">
+                                        <p class="text-xs text-gray-400 mt-1 text-right pump-kw-display"></p>
+                                    </div>
+                                </div>
+                                <!-- Pump Type Medium -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="numPumpsB" class="text-xs text-gray-500">No. of Pumps (Medium)</label>
+                                        <input type="number" id="numPumpsB" value="12" class="w-full p-2 text-white mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="powerRatingB" class="text-xs text-gray-500">Power (HP)/Pump Medium</label>
+                                        <input type="number" id="powerRatingB" value="60" class="w-full p-2 text-white mt-1 pump-power-input">
+                                        <p class="text-xs text-gray-400 mt-1 text-right pump-kw-display"></p>
+                                    </div>
+                                </div>
+                                <!-- Pump Type Small -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="numPumpsC" class="text-xs text-gray-500">No. of Pumps (Small)</label>
+                                        <input type="number" id="numPumpsC" value="20" class="w-full p-2 text-white mt-1">
+                                    </div>
+                                    <div>
+                                        <label for="powerRatingC" class="text-xs text-gray-500">Power (HP)/Pump Small</label>
+                                        <input type="number" id="powerRatingC" value="10" class="w-full p-2 text-white mt-1 pump-power-input">
+                                         <p class="text-xs text-gray-400 mt-1 text-right pump-kw-display"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                         <!-- Energy Source -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Energy Source Selection</label>
+                            <div id="energyControlContainer" class="grid grid-cols-2 gap-2">
+                                <button data-source="solar" class="energy-btn control-btn bg-gray-700 hover:bg-yellow-500 hover:text-gray-900 font-semibold py-2 px-3 rounded-lg active">Solar 🌞</button>
+                                <button data-source="grid" class="energy-btn control-btn bg-gray-700 hover:bg-blue-500 hover:text-gray-900 font-semibold py-2 px-3 rounded-lg">Grid ⚡</button>
+                                <button data-source="diesel" class="energy-btn control-btn bg-gray-700 hover:bg-red-500 hover:text-gray-900 font-semibold py-2 px-3 rounded-lg">Diesel ⛽</button>
+                                <button data-source="battery" class="energy-btn control-btn bg-gray-700 hover:bg-green-500 hover:text-gray-900 font-semibold py-2 px-3 rounded-lg">Battery 🔋</button>
+                            </div>
+                        </div>
+                         <!-- Battery Status -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-2">Battery Status</label>
+                            <div class="bg-gray-700 p-3 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span id="batteryState" class="font-semibold text-cyan-400">Idle</span>
+                                    <span id="batteryChargePercentage" class="font-bold text-lg">100%</span>
+                                </div>
+                                <div class="w-full bg-gray-600 rounded-full h-2.5">
+                                    <div id="batteryChargeBar" class="bg-green-500 h-2.5 rounded-full transition-all duration-500" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Manual Controls -->
+                    <div class="pt-4 mt-4 border-t border-gray-700">
+                         <button id="toggleSimulationBtn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg control-btn text-lg">
+                                 Start Simulation
+                         </button>
+                    </div>
+                </div>
+                 <!-- Operational Costs & Savings Card -->
+                <div class="card p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-300 section-title">Operational Costs & Savings</h2>
+                        <span class="text-[11px] text-gray-400">Live summary since start</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Total Energy Cost -->
+                        <div class="bg-gray-900/70 border border-gray-700 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-700/30">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v20M7 6h7.5a3.5 3.5 0 010 7H9m0 0h6a3.5 3.5 0 010 7H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <div>
+                                    <p class="text-xs uppercase text-gray-400">₹</p>
+                                    <p id="totalCost" class="text-xl md:text-2xl font-extrabold text-yellow-400 leading-tight break-words">0</p>
+                                    <p class="text-[11px] text-gray-500">All sources combined</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- CO2 Reduced -->
+                        <div class="bg-gray-900/70 border border-gray-700 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-500/15 text-green-400 border border-green-700/30">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12a7 7 0 1014 0A7 7 0 005 12z" stroke="currentColor" stroke-width="1.5"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <div>
+                                    <p class="text-xs uppercase text-gray-400">CO₂ Reduced (vs Diesel)</p>
+                                    <p id="co2Saved" class="text-xl md:text-2xl font-extrabold text-green-400 leading-tight break-words">0.00 tons</p>
+                                    <p class="text-[11px] text-gray-500">Equivalent avoided emissions</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Diesel Saved -->
+                        <div class="bg-gray-900/70 border border-gray-700 rounded-lg p-4">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-700/30">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7h18M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12" stroke="currentColor" stroke-width="1.5"/><path d="M9 7V5a3 3 0 013-3 3 3 0 013 3v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                </span>
+                                <div>
+                                    <p class="text-xs uppercase text-gray-400">Diesel Saved</p>
+                                    <p id="dieselSaved" class="text-xl md:text-2xl font-extrabold text-emerald-400 leading-tight break-words">0 L</p>
+                                    <p class="text-[11px] text-gray-500">Litres not consumed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column for Charts -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Water Pumped Chart -->
+                <div class="card p-6 shadow-lg h-80">
+                    <h3 class="text-lg font-semibold text-gray-300 mb-3">Water Pumped Over Time</h3>
+                    <canvas id="waterChart"></canvas>
+                </div>
+                 <!-- Grid for the two bottom charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Energy Consumed Chart -->
+                    <div class="card p-6 shadow-lg h-80">
+                        <h3 class="text-lg font-semibold text-gray-300 mb-3">Total Energy Consumed</h3>
+                        <canvas id="energyChart"></canvas>
+                    </div>
+                    <!-- Energy Cost Chart -->
+                    <div class="card p-6 shadow-lg h-80">
+                        <h3 class="text-lg font-semibold text-gray-300 mb-3">Total Energy Cost</h3>
+                        <canvas id="energyCostChart"></canvas>
+                    </div>
+                </div>
+                <!-- Uptime and Money Saved Charts placed below with same dimensions -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <!-- Energy Source Uptime Chart Card -->
+                    <div class="card p-6 shadow-lg h-80">
+                        <h3 class="text-lg font-semibold text-gray-300 mb-3">Energy Source Uptime</h3>
+                        <canvas id="uptimeChart"></canvas>
+                    </div>
+                    <!-- Money Saved Chart Card -->
+                    <div class="card p-6 shadow-lg h-80">
+                        <h3 class="text-lg font-semibold text-gray-300 mb-3">Money Saved vs Diesel</h3>
+                        <canvas id="moneySavedChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simulation Parameters Section -->
+    <div class="p-4 sm:p-6 pt-0">
+        <section class="mb-6">
+            <div class="card p-6">
+                <h2 class="text-2xl font-bold text-gray-300 mb-4 section-title">Simulation Parameters</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Configurable Inputs -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-3">Configurable Inputs</h3>
+                        <div class="bg-gray-900 rounded-lg p-4 space-y-2">
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Active Energy Source</span><span id="param_activeEnergySource" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Large) - Count</span><span id="param_numPumpsA" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Large) - Power (HP)</span><span id="param_powerRatingA" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Medium) - Count</span><span id="param_numPumpsB" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Medium) - Power (HP)</span><span id="param_powerRatingB" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Small) - Count</span><span id="param_numPumpsC" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Pumps (Small) - Power (HP)</span><span id="param_powerRatingC" class="font-semibold text-gray-200">-</span></div>
+                        </div>
+                    </div>
+                    <!-- Constants -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-cyan-400 mb-3">Constants</h3>
+                        <div class="bg-gray-900 rounded-lg p-4 space-y-3">
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">HP to kW</span><span id="param_HP_TO_KW" class="font-semibold text-gray-200">-</span></div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <label class="text-sm text-gray-400 flex items-center justify-between bg-gray-800/60 rounded-lg border border-gray-700 px-3 py-2">
+                                    <span>Solar Cost (₹/kWh)</span>
+                                    <input id="input_solarCostPerKwh" type="number" step="0.1" min="0" class="w-24 p-1 text-sm bg-gray-900 border border-gray-700 rounded text-gray-200 ml-3 text-right" />
+                                </label>
+                                <label class="text-sm text-gray-400 flex items-center justify-between bg-gray-800/60 rounded-lg border border-gray-700 px-3 py-2">
+                                    <span>Grid Cost (₹/kWh)</span>
+                                    <input id="input_gridCostPerKwh" type="number" step="0.1" min="0" class="w-24 p-1 text-sm bg-gray-900 border border-gray-700 rounded text-gray-200 ml-3 text-right" />
+                                </label>
+                                <label class="text-sm text-gray-400 flex items-center justify-between bg-gray-800/60 rounded-lg border border-gray-700 px-3 py-2">
+                                    <span>Battery Use Cost (₹/kWh)</span>
+                                    <input id="input_batteryCostPerKwh" type="number" step="0.1" min="0" class="w-24 p-1 text-sm bg-gray-900 border border-gray-700 rounded text-gray-200 ml-3 text-right" />
+                                </label>
+                            </div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Diesel litres/kWh</span><span id="param_DIESEL_LITRES_PER_KWH" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Diesel Cost (₹/L)</span><span id="param_DIESEL_COST_PER_LITRE" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Diesel Cost (₹/kWh)</span><span id="param_DIESEL_COST_PER_KWH" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">CO₂ per L Diesel (kg)</span><span id="param_KG_CO2_PER_LITRE_DIESEL" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Water Pumped (kL/kWh)</span><span id="param_WATER_PUMPED_KL_PER_KWH" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Sim Step (minutes)</span><span id="param_SIMULATION_STEP_MINUTES" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Battery Capacity (kWh)</span><span id="param_BATTERY_CAPACITY_KWH" class="font-semibold text-gray-200">-</span></div>
+                            <div class="flex justify-between text-sm"><span class="text-gray-400">Battery Charging Rate (kW)</span><span id="param_BATTERY_CHARGING_RATE_KW" class="font-semibold text-gray-200">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <footer class="text-center p-4 mt-6 text-gray-500 text-sm">
+        <p>Mine Dewatering Dashboard v5.0 | Monitored by Operations Team</p>
+        <p>&copy; 2025 Advanced Mining Solutions. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // --- LIVE CLOCK (SIMULATED) ---
+        const timeEl = document.getElementById('time');
+        const dateEl = document.getElementById('date');
+        // Set the initial date based on the user's request.
+        let currentTime = dayjs('2025-09-20T04:24:00+05:30');
+
+        function updateTime() {
+            // Increment the time by 1 second every time the function is called
+            currentTime = currentTime.add(1, 'second');
+            timeEl.textContent = currentTime.format('HH:mm:ss');
+            dateEl.textContent = currentTime.format('dddd, D MMMM YYYY');
+        }
+        
+        // Initial call to display time immediately
+        timeEl.textContent = currentTime.format('HH:mm:ss');
+        dateEl.textContent = currentTime.format('dddd, D MMMM YYYY');
+        
+        // Update the time every second
+        setInterval(updateTime, 1000);
+
+
+        // --- CHART CONFIGURATION ---
+        Chart.defaults.color = '#9ca3af';
+        Chart.defaults.borderColor = '#4b5563';
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { font: { size: 14 } } },
+                tooltip: {
+                    backgroundColor: '#1f2937', titleColor: '#e5e7eb', bodyColor: '#d1d5db',
+                    borderColor: '#4b5563', borderWidth: 1, padding: 10, cornerRadius: 8
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: '#374151' } }
+            }
+        };
+
+        // --- WATER PUMPED CHART ---
+        const waterCtx = document.getElementById("waterChart").getContext('2d');
+        const waterChart = new Chart(waterCtx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Total Water Pumped (kL)",
+                    data: [],
+                    borderColor: "#60a5fa",
+                    backgroundColor: "rgba(96, 165, 250, 0.2)",
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2
+                }]
+            },
+            options: chartOptions
+        });
+
+        // --- ENERGY USAGE CHART ---
+        const energyCtx = document.getElementById("energyChart").getContext('2d');
+        const energyChart = new Chart(energyCtx, {
+            type: "bar",
+            data: {
+                labels: ["Solar", "Grid", "Diesel", "Battery"],
+                datasets: [{
+                    label: "Total Energy Consumed (kWh)",
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ["#facc15", "#60a5fa", "#f87171", "#4ade80"]
+                }]
+            },
+            options: chartOptions
+        });
+        
+        // --- ENERGY COST CHART ---
+        const energyCostCtx = document.getElementById("energyCostChart").getContext('2d');
+        const energyCostChart = new Chart(energyCostCtx, {
+            type: "bar",
+            data: {
+                labels: ["Solar", "Grid", "Diesel", "Battery"],
+                datasets: [{
+                    label: "Total Energy Cost (₹)",
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ["#facc15", "#60a5fa", "#f87171", "#4ade80"]
+                }]
+            },
+            options: chartOptions
+        });
+
+        // --- ENERGY SOURCE UPTIME CHART ---
+        const uptimeCtx = document.getElementById('uptimeChart').getContext('2d');
+        const uptimeChart = new Chart(uptimeCtx, {
+            type: 'bar',
+            data: {
+                labels: ["Solar", "Grid", "Diesel", "Battery"],
+                datasets: [{
+                    label: 'Uptime (hours)',
+                    data: [0, 0, 0, 0],
+                    backgroundColor: ['#facc15', '#60a5fa', '#f87171', '#4ade80']
+                }]
+            },
+            options: {
+                ...chartOptions,
+                plugins: {
+                    ...chartOptions.plugins,
+                    title: {
+                        display: true,
+                        text: 'Energy Source Uptime',
+                        font: { size: 18 },
+                        padding: { top: 10, bottom: 20 }
+                    },
+                    tooltip: {
+                         ...chartOptions.plugins.tooltip,
+                         callbacks: {
+                             label: function(context) {
+                                 let label = context.dataset.label || '';
+                                 if (label) {
+                                     label += ': ';
+                                 }
+                                 // The data value is in hours. Convert to seconds for formatting.
+                                 const totalSeconds = context.parsed.y * 3600;
+                                 label += formatTime(totalSeconds); // Use existing formatTime function
+                                 return label;
+                             }
+                         }
+                    }
+                },
+                scales: {
+                     ...chartOptions.scales,
+                     y: {
+                         ...chartOptions.scales.y,
+                         title: {
+                             display: true,
+                             text: 'Time (hours)'
+                         }
+                     }
+                }
+            }
+        });
+        
+        // --- MONEY SAVED CHART ---
+        const moneySavedCtx = document.getElementById("moneySavedChart").getContext('2d');
+        const moneySavedChart = new Chart(moneySavedCtx, {
+            type: "bar",
+            data: {
+                labels: ["Solar", "Grid", "Battery (vs Diesel)"],
+                datasets: [{
+                    label: "Money Saved (₹)",
+                    data: [0, 0, 0],
+                    backgroundColor: ["#34d399", "#60a5fa", "#4ade80"]
+                }]
+            },
+            options: chartOptions
+        });
+
+
+        // --- STATE & UI ELEMENTS ---
+        let totalEnergyCost = 0, totalCo2Saved = 0, totalDieselSaved = 0, totalWaterPumped = 0;
+        let totalEnergyConsumed = [0, 0, 0, 0]; // [Solar, Grid, Diesel, Battery]
+        let totalEnergyCostBySource = [0, 0, 0, 0]; // [Solar, Grid, Diesel, Battery]
+        let totalMoneySavedBySource = [0, 0, 0]; // [Solar, Grid, Battery vs Diesel]
+        let timeBySource = { solar: 0, grid: 0, diesel: 0, battery: 0 }; // in simulated seconds
+        let simulatedTimeInSeconds = 0;
+        let nextHourMark = 3600;
+        let activeEnergySource = 'solar';
+        let isSimulationRunning = false;
+        let simulationInterval = null;
+
+        // Battery State
+        let currentBatteryChargeKWH;
+        let batteryState = 'idle'; // idle, charging, discharging, depleted
+
+        const totalCostEl = document.getElementById("totalCost");
+        const co2SavedEl = document.getElementById("co2Saved");
+        const dieselSavedEl = document.getElementById("dieselSaved");
+        const energyControlContainer = document.getElementById('energyControlContainer');
+        const toggleSimulationBtn = document.getElementById('toggleSimulationBtn');
+        const batteryStateEl = document.getElementById('batteryState');
+        const batteryChargePercentageEl = document.getElementById('batteryChargePercentage');
+        const batteryChargeBarEl = document.getElementById('batteryChargeBar');
+
+
+        // --- CONSTANTS FOR CALCULATION ---
+        const HP_TO_KW = 0.7457;
+        let solarCostPerKwh = 7;
+        let gridCostPerKwh = 14;
+        let batteryCostPerKwh = 5; // Cost of using stored energy
+        const DIESEL_LITRES_PER_KWH = 0.3;
+        const DIESEL_COST_PER_LITRE = 100;
+        const DIESEL_COST_PER_KWH = DIESEL_LITRES_PER_KWH * DIESEL_COST_PER_LITRE;
+        const KG_CO2_PER_LITRE_DIESEL = 2.68;
+        const WATER_PUMPED_KL_PER_KWH = 4.5;
+        const SIMULATION_INTERVAL_MS = 1000;
+        const SIMULATION_STEP_MINUTES = 12; // 5s = 1 hour
+        const BATTERY_CAPACITY_KWH = 1100;
+        const BATTERY_CHARGING_RATE_KW = 50;
+
+
+        // --- UI UPDATE FUNCTIONS ---
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            return [hours, minutes, seconds]
+                .map(v => String(v).padStart(2, '0'))
+                .join(":");
+        }
+
+        function updateEnergySourceUI() {
+            document.querySelectorAll('.energy-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.source === activeEnergySource);
+            });
+        }
+
+        function updateAllKwDisplays() {
+            document.querySelectorAll('.pump-power-input').forEach(input => {
+                const hp = parseInt(input.value) || 0;
+                const kw = hp * HP_TO_KW;
+                const displayEl = input.nextElementSibling;
+                if (displayEl && displayEl.classList.contains('pump-kw-display')) {
+                    displayEl.textContent = `~${kw.toFixed(2)} kW`;
+                }
+            });
+        }
+
+        function updateInventoryDisplay() {
+            const numPumpsA = parseInt(document.getElementById('numPumpsA').value) || 0; // Large
+            const numPumpsB = parseInt(document.getElementById('numPumpsB').value) || 0; // Medium
+            const numPumpsC = parseInt(document.getElementById('numPumpsC').value) || 0; // Small
+            const totalPumps = numPumpsA + numPumpsB + numPumpsC;
+
+            document.getElementById('inventoryLargePumps').textContent = numPumpsA;
+            document.getElementById('inventoryMediumPumps').textContent = numPumpsB;
+            document.getElementById('inventorySmallPumps').textContent = numPumpsC;
+            document.getElementById('inventoryTotalPumps').textContent = totalPumps;
+        }
+
+        function updateBatteryUI() {
+            const percentage = Math.max(0, (currentBatteryChargeKWH / BATTERY_CAPACITY_KWH) * 100);
+            batteryStateEl.textContent = batteryState.charAt(0).toUpperCase() + batteryState.slice(1);
+            batteryChargePercentageEl.textContent = `${percentage.toFixed(0)}%`;
+            batteryChargeBarEl.style.width = `${percentage}%`;
+
+            batteryChargeBarEl.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+            if (percentage > 50) {
+                batteryChargeBarEl.classList.add('bg-green-500');
+            } else if (percentage > 20) {
+                batteryChargeBarEl.classList.add('bg-yellow-500');
+            } else {
+                batteryChargeBarEl.classList.add('bg-red-500');
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        energyControlContainer.addEventListener('click', (e) => {
+            const button = e.target.closest('.energy-btn');
+            if (button && button.dataset.source) {
+                activeEnergySource = button.dataset.source;
+                updateEnergySourceUI();
+            }
+        });
+        
+        document.querySelectorAll('.pump-power-input').forEach(input => {
+            input.addEventListener('input', updateAllKwDisplays);
+        });
+        
+        document.querySelectorAll('#numPumpsA, #numPumpsB, #numPumpsC').forEach(input => {
+            input.addEventListener('input', updateInventoryDisplay);
+        });
+
+        toggleSimulationBtn.addEventListener('click', () => {
+            isSimulationRunning = !isSimulationRunning;
+            if (isSimulationRunning) {
+                startSimulation();
+            } else {
+                stopSimulation();
+            }
+        });
+
+        function resetSimulation() {
+            totalEnergyCost = 0;
+            totalCo2Saved = 0;
+            totalDieselSaved = 0;
+            totalWaterPumped = 0;
+            totalEnergyConsumed = [0, 0, 0, 0];
+            totalEnergyCostBySource = [0, 0, 0, 0];
+            totalMoneySavedBySource = [0, 0, 0];
+            timeBySource = { solar: 0, grid: 0, diesel: 0, battery: 0 };
+            simulatedTimeInSeconds = 0;
+            nextHourMark = 3600;
+            currentBatteryChargeKWH = BATTERY_CAPACITY_KWH;
+            batteryState = 'Idle';
+
+
+            // Reset UI displays
+            totalCostEl.textContent = '₹ 0';
+            dieselSavedEl.textContent = '0 L';
+            co2SavedEl.textContent = '0.00 tons';
+
+
+            // Reset charts
+            waterChart.data.labels = [];
+            waterChart.data.datasets[0].data = [];
+            energyChart.data.datasets[0].data = [0, 0, 0, 0];
+            energyCostChart.data.datasets[0].data = [0, 0, 0, 0];
+            moneySavedChart.data.datasets[0].data = [0, 0, 0];
+            uptimeChart.data.datasets[0].data = [0, 0, 0, 0];
+            waterChart.update();
+            energyChart.update();
+            energyCostChart.update();
+            moneySavedChart.update();
+            uptimeChart.update();
+            updateBatteryUI();
+        }
+
+        // --- SIMULATION LOGIC ---
+        function startSimulation() {
+            resetSimulation();
+            toggleSimulationBtn.textContent = 'Stop Simulation';
+            toggleSimulationBtn.classList.remove('bg-cyan-600', 'hover:bg-cyan-700');
+            toggleSimulationBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+            if(!simulationInterval) {
+                 simulationInterval = setInterval(runSimulationStep, SIMULATION_INTERVAL_MS);
+            }
+        }
+
+        function stopSimulation() {
+            toggleSimulationBtn.textContent = 'Start Simulation';
+            toggleSimulationBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            toggleSimulationBtn.classList.add('bg-cyan-600', 'hover:bg-cyan-700');
+            clearInterval(simulationInterval);
+            simulationInterval = null;
+        }
+
+        function runSimulationStep() {
+            const numPumpsA = parseInt(document.getElementById('numPumpsA').value) || 0;
+            const powerRatingA = parseInt(document.getElementById('powerRatingA').value) || 0;
+            const numPumpsB = parseInt(document.getElementById('numPumpsB').value) || 0;
+            const powerRatingB = parseInt(document.getElementById('powerRatingB').value) || 0;
+            const numPumpsC = parseInt(document.getElementById('numPumpsC').value) || 0;
+            const powerRatingC = parseInt(document.getElementById('powerRatingC').value) || 0;
+            
+            const totalPowerKW = (numPumpsA * powerRatingA * HP_TO_KW) +
+                                 (numPumpsB * powerRatingB * HP_TO_KW) +
+                                 (numPumpsC * powerRatingC * HP_TO_KW);
+
+            if (totalPowerKW === 0) return;
+
+            const timeStepInSeconds = SIMULATION_STEP_MINUTES * 60;
+            
+            // --- Battery State Logic ---
+            if (['solar', 'grid'].includes(activeEnergySource)) {
+                batteryState = 'Charging';
+                const chargeGainedKWH = BATTERY_CHARGING_RATE_KW * (timeStepInSeconds / 3600);
+                currentBatteryChargeKWH = Math.min(BATTERY_CAPACITY_KWH, currentBatteryChargeKWH + chargeGainedKWH);
+            } else if (activeEnergySource === 'battery') {
+                if (currentBatteryChargeKWH > 0) {
+                    batteryState = 'Discharging';
+                } else {
+                    batteryState = 'Depleted';
+                    activeEnergySource = 'solar'; // Auto-switch to solar
+                    updateEnergySourceUI();
+                }
+            } else { // Diesel
+                batteryState = 'Idle';
+            }
+
+
+            // 1. Calculate power and interval-based energy
+            const energyConsumedKWH = totalPowerKW * (timeStepInSeconds / 3600);
+            
+            if (activeEnergySource === 'battery' && currentBatteryChargeKWH < energyConsumedKWH) {
+                 // Not enough charge for a full step, auto-switch
+                 activeEnergySource = 'solar';
+                 updateEnergySourceUI();
+                 batteryState = 'Depleted';
+            }
+
+            const waterPumpedKL = energyConsumedKWH * WATER_PUMPED_KL_PER_KWH;
+
+            // 2. Accumulate totals
+            totalWaterPumped += waterPumpedKL;
+            simulatedTimeInSeconds += timeStepInSeconds;
+            timeBySource[activeEnergySource] += timeStepInSeconds;
+
+            // 3. Calculate costs and savings for the interval
+            const litresOfDieselEquivalent = energyConsumedKWH * DIESEL_LITRES_PER_KWH;
+            let costThisInterval = 0, dieselSavedThisInterval = 0, co2SavedThisInterval = 0;
+            const dieselCostEquivalent = energyConsumedKWH * DIESEL_COST_PER_KWH;
+
+            switch(activeEnergySource) {
+                case 'solar':
+                    costThisInterval = energyConsumedKWH * solarCostPerKwh;
+                    dieselSavedThisInterval = litresOfDieselEquivalent;
+                    co2SavedThisInterval = (litresOfDieselEquivalent * KG_CO2_PER_LITRE_DIESEL) / 1000;
+                    totalMoneySavedBySource[0] += dieselCostEquivalent - costThisInterval;
+                    break;
+                case 'grid':
+                    costThisInterval = energyConsumedKWH * gridCostPerKwh;
+                    dieselSavedThisInterval = litresOfDieselEquivalent;
+                    co2SavedThisInterval = (litresOfDieselEquivalent * KG_CO2_PER_LITRE_DIESEL) / 1000;
+                    totalMoneySavedBySource[1] += dieselCostEquivalent - costThisInterval;
+                    break;
+                case 'battery':
+                    costThisInterval = energyConsumedKWH * batteryCostPerKwh;
+                    currentBatteryChargeKWH -= energyConsumedKWH; // Discharge battery
+                    dieselSavedThisInterval = litresOfDieselEquivalent;
+                    co2SavedThisInterval = (litresOfDieselEquivalent * KG_CO2_PER_LITRE_DIESEL) / 1000;
+                    totalMoneySavedBySource[2] += dieselCostEquivalent - costThisInterval;
+                    break;
+                case 'diesel':
+                    costThisInterval = dieselCostEquivalent;
+                    break;
+            }
+            
+            // 4. Update cumulative totals
+            totalEnergyCost += costThisInterval;
+            totalDieselSaved += dieselSavedThisInterval;
+            totalCo2Saved += co2SavedThisInterval;
+
+            // 5. Update UI displays
+            totalCostEl.textContent = `${Math.round(totalEnergyCost).toLocaleString('en-IN')}`;
+            dieselSavedEl.textContent = `${Math.round(totalDieselSaved).toLocaleString('en-IN')} L`;
+            co2SavedEl.textContent = `${totalCo2Saved.toFixed(2)} tons`;
+            updateBatteryUI();
+
+            // 6. Update energy charts 
+            const sourceIndex = { solar: 0, grid: 1, diesel: 2, battery: 3 };
+            totalEnergyConsumed[sourceIndex[activeEnergySource]] += energyConsumedKWH;
+            totalEnergyCostBySource[sourceIndex[activeEnergySource]] += costThisInterval;
+            
+            energyChart.data.datasets[0].data = totalEnergyConsumed.map(e => e.toFixed(2));
+            energyChart.update();
+            
+            energyCostChart.data.datasets[0].data = totalEnergyCostBySource.map(c => Math.round(c));
+            energyCostChart.update();
+
+            moneySavedChart.data.datasets[0].data = totalMoneySavedBySource.map(s => Math.round(s));
+            moneySavedChart.update();
+
+            uptimeChart.data.datasets[0].data = [
+                timeBySource.solar,
+                timeBySource.grid,
+                timeBySource.diesel,
+                timeBySource.battery
+            ].map(sec => sec / 3600); // Convert seconds to hours for the chart
+            uptimeChart.update();
+
+            // 7. Update water chart on an hourly basis
+            if (simulatedTimeInSeconds >= nextHourMark) {
+                waterChart.data.labels.push(`Hour ${nextHourMark / 3600}`);
+                waterChart.data.datasets[0].data.push(totalWaterPumped.toFixed(2));
+                waterChart.update();
+                nextHourMark += 3600;
+            }
+        }
+
+        // --- INITIAL UI SETUP ---
+        updateEnergySourceUI();
+        updateAllKwDisplays();
+        updateInventoryDisplay();
+        resetSimulation(); // Call reset to initialize battery UI correctly
+
+        // --- PARAMETERS PANEL ---
+        function updateParametersPanel() {
+            // Inputs
+            document.getElementById('param_activeEnergySource').textContent = activeEnergySource.charAt(0).toUpperCase() + activeEnergySource.slice(1);
+            document.getElementById('param_numPumpsA').textContent = document.getElementById('numPumpsA').value;
+            document.getElementById('param_powerRatingA').textContent = document.getElementById('powerRatingA').value;
+            document.getElementById('param_numPumpsB').textContent = document.getElementById('numPumpsB').value;
+            document.getElementById('param_powerRatingB').textContent = document.getElementById('powerRatingB').value;
+            document.getElementById('param_numPumpsC').textContent = document.getElementById('numPumpsC').value;
+            document.getElementById('param_powerRatingC').textContent = document.getElementById('powerRatingC').value;
+
+            // Constants
+            document.getElementById('param_HP_TO_KW').textContent = HP_TO_KW.toFixed(4);
+            const solarInput = document.getElementById('input_solarCostPerKwh');
+            const gridInput = document.getElementById('input_gridCostPerKwh');
+            const batteryInput = document.getElementById('input_batteryCostPerKwh');
+            if (solarInput && gridInput && batteryInput) {
+                // Ensure inputs reflect current values
+                if (solarInput.value === '') solarInput.value = solarCostPerKwh;
+                if (gridInput.value === '') gridInput.value = gridCostPerKwh;
+                if (batteryInput.value === '') batteryInput.value = batteryCostPerKwh;
+            }
+            document.getElementById('param_DIESEL_LITRES_PER_KWH').textContent = DIESEL_LITRES_PER_KWH;
+            document.getElementById('param_DIESEL_COST_PER_LITRE').textContent = DIESEL_COST_PER_LITRE;
+            document.getElementById('param_DIESEL_COST_PER_KWH').textContent = DIESEL_COST_PER_KWH.toFixed(2);
+            document.getElementById('param_KG_CO2_PER_LITRE_DIESEL').textContent = KG_CO2_PER_LITRE_DIESEL;
+            document.getElementById('param_WATER_PUMPED_KL_PER_KWH').textContent = WATER_PUMPED_KL_PER_KWH;
+            document.getElementById('param_SIMULATION_STEP_MINUTES').textContent = SIMULATION_STEP_MINUTES;
+            document.getElementById('param_BATTERY_CAPACITY_KWH').textContent = BATTERY_CAPACITY_KWH;
+            document.getElementById('param_BATTERY_CHARGING_RATE_KW').textContent = BATTERY_CHARGING_RATE_KW;
+        }
+
+        // Initial fill
+        updateParametersPanel();
+
+        // Update on interactions
+        energyControlContainer.addEventListener('click', () => updateParametersPanel());
+        ['numPumpsA','numPumpsB','numPumpsC','powerRatingA','powerRatingB','powerRatingC']
+            .forEach(id => document.getElementById(id).addEventListener('input', updateParametersPanel));
+        // Cost inputs listeners
+        function clampNonNegativeNumber(value, fallback) {
+            const parsed = parseFloat(value);
+            if (isNaN(parsed) || parsed < 0) return fallback;
+            return parsed;
+        }
+        const solarInputEl = document.getElementById('input_solarCostPerKwh');
+        const gridInputEl = document.getElementById('input_gridCostPerKwh');
+        const batteryInputEl = document.getElementById('input_batteryCostPerKwh');
+        if (solarInputEl && gridInputEl && batteryInputEl) {
+            solarInputEl.addEventListener('input', (e) => {
+                solarCostPerKwh = clampNonNegativeNumber(e.target.value, solarCostPerKwh);
+            });
+            gridInputEl.addEventListener('input', (e) => {
+                gridCostPerKwh = clampNonNegativeNumber(e.target.value, gridCostPerKwh);
+            });
+            batteryInputEl.addEventListener('input', (e) => {
+                batteryCostPerKwh = clampNonNegativeNumber(e.target.value, batteryCostPerKwh);
+            });
+        }
+        // Also after reset/start
+        const originalResetSimulation = resetSimulation;
+        resetSimulation = function() {
+            originalResetSimulation();
+            updateParametersPanel();
+        };
+
+        // --- SERVICE WORKER FOR OFFLINE AVAILABILITY ---
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE_NAME = 'mine-dashboard-cache-v1';
+                // Cache this file itself, plus the external libraries
+                const urlsToCache = [
+                    './',
+                    'https://cdn.tailwindcss.com',
+                    'https://cdn.jsdelivr.net/npm/chart.js',
+                    'https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js'
+                ];
+
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME)
+                            .then(cache => {
+                                console.log('Opened cache');
+                                return cache.addAll(urlsToCache);
+                            })
+                    );
+                });
+
+                self.addEventListener('fetch', event => {
+                    event.respondWith(
+                        caches.match(event.request)
+                            .then(response => {
+                                // Cache hit - return response
+                                if (response) {
+                                    return response;
+                                }
+                                // Not in cache - fetch from network
+                                return fetch(event.request);
+                            })
+                    );
+                });
+
+                self.addEventListener('activate', event => {
+                    const cacheWhitelist = [CACHE_NAME];
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                });
+            `;
+            
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register(swUrl)
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
